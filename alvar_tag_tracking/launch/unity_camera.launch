@@ -21,7 +21,6 @@
 
       <!-- Camera_info publisher -->
     <node pkg="alvar_tag_tracking" type="camera_info_publisher.py" name="camera_info_publisher" output="screen">
-      <!-- if="$(eval arg('main_cam') == arg('cam_frame_id'))"> -->
       <param name="~filename" type="string" value="$(find alvar_tag_tracking)/share/calibration/unity/unity.yaml"/>
       <remap from="camera_info"  to="/$(arg main_cam)/camera_info" />
     </node>
