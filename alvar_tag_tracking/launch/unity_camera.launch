@@ -1,0 +1,57 @@
+<launch> 
+  <arg name="cam_id"       default="4"                         /> 
+  <arg name="main_cam"     default="cam4"                      />
+  <arg name="ar_node_name" default="individualMarkersNoKinect" />
+  <arg name="bundle_files" default=""                          />
+
+    <!-- Parameters --> 
+  <arg name="cam_number"           default="$(eval str(arg('cam_id')))"   />
+  <arg name="cam_name"             default="cam$(arg cam_number)"         />
+  <arg name="marker_size"          default="50.0"                         />
+  <arg name="max_new_marker_error" default="0.08"                         />
+  <arg name="max_track_error"      default="0.2"                          />
+  <arg name="pose_marker_topic"    default="/ar_pose_marker"              />
+  <arg name="cam_frame_id"         default="$(arg cam_name)"              />
+  <arg name="cam_image_topic"      default="/$(arg cam_name)/image_raw"   />
+  <arg name="cam_info_topic"       default="/$(arg cam_name)/camera_info" />
+
+  <group ns="$(arg cam_name)">
+    <!-- Decompressing the image -->
+    <node pkg="image_transport" name="republisher" type="republish" args="compressed in:=/$(arg cam_name)/image_raw raw out:=/$(arg cam_name)/image_raw" output="screen"/>
+
+      <!-- Camera_info publisher -->
+    <node pkg="alvar_tag_tracking" type="camera_info_publisher.py" name="camera_info_publisher" output="screen">
+      <!-- if="$(eval arg('main_cam') == arg('cam_frame_id'))"> -->
+      <param name="~filename" type="string" value="$(find alvar_tag_tracking)/share/calibration/unity/unity.yaml"/>
+      <remap from="camera_info"  to="/$(arg main_cam)/camera_info" />
+    </node>
+
+    <!-- Marker Detector -->
+    <node name="ar_track_alvar1" pkg="ar_track_alvar" type="$(arg ar_node_name)" respawn="false" output="screen" if="$(eval arg('main_cam') == arg('cam_frame_id'))">
+      <param name="marker_size"          type="double" value="$(arg marker_size)"                              />
+      <param name="max_new_marker_error" type="double" value="$(arg max_new_marker_error)"                     />
+      <param name="max_track_error"      type="double" value="$(arg max_track_error)"                          />
+      <param name="output_frame"         type="string" value="$(arg cam_frame_id)"                             />
+      <param name="cam_to_marker"        type="bool"   value="true"                                            />
+        <!-- <param name="bundle_files"         type="string" value="$(find projet)/bundles/xmls/$(arg bundle_files)" /> -->
+
+      <remap from="/tf"          to="/tf0"                   />
+      <remap from="camera_image" to="$(arg cam_image_topic)" />
+      <remap from="camera_info"  to="$(arg cam_info_topic)"  />  
+    </node>	
+
+    <!-- Marker Detector -->
+    <node name="ar_track_alvar0" pkg="ar_track_alvar" type="$(arg ar_node_name)" respawn="false" output="screen" unless="$(eval arg('main_cam') == arg('cam_frame_id'))">
+      <param name="marker_size"          type="double" value="$(arg marker_size)"                 />
+      <param name="max_new_marker_error" type="double" value="$(arg max_new_marker_error)"        />
+      <param name="max_track_error"      type="double" value="$(arg max_track_error)"             />
+      <param name="output_frame"         type="string" value="$(arg cam_frame_id)"                />
+      <param name="cam_to_marker"        type="bool"   value="false"                              />
+      <!-- 	<param name="bundle_files"         type="string" value="$(find projet)/$(arg bundle_files)" /> -->
+
+      <remap from="/tf"          to="/tf0"                   />
+      <remap from="camera_image" to="$(arg cam_image_topic)" />
+      <remap from="camera_info"  to="$(arg cam_info_topic)"  />  
+    </node>	
+  </group>
+</launch>

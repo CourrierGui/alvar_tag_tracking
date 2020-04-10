@@ -1,0 +1,40 @@
+<launch> 
+
+	<arg name="cam_id"       default="4"                         /> 
+
+	<!-- Controller -->
+	<!-- <node name="calibration_gui" pkg="projet" type="calibration_gui" output="log"> -->
+	<!-- 	<param name="main_cam" value="$(arg main_cam)"/> -->
+	<!-- 	<param name="project_location" value="$(find projet)"/> -->
+	<!-- </node> -->
+
+	<!-- rviz -->
+	<!-- <node name="rviz" type="rviz" pkg="rviz" args="-d $(find projet)/rviz/config/tag_and_camera_visualisation.rviz" /> -->
+    <node name="rviz" type="rviz" pkg="rviz"/>
+
+	<!-- Listening to AlvarMarkers msgs -->
+	<!-- <node name="new_tf_publisher" pkg="projet" type="new_tf_publisher" output="screen" args="/ar_pose_marker $(arg main_cam)"/> -->
+
+	<!-- Listening to NewTF msgs -->
+	<!-- <node name="new_tf_listener" pkg="projet" type="new_tf_listener" output="screen" args="/new_tf $(arg main_cam)"/> -->
+
+	<!-- Prefixing tfs -->
+	<node name="tf_prefixer" pkg="projet" type="tf_prefixer" output="screen" args="/tf0"/>
+
+	<!-- Node manager -->
+	<!-- <node name="key_input" pkg="projet" type="key_input" args="$(arg main_cam) $(arg nb_cam)" output="screen"/> -->
+
+	<!-- Calculate Average Tag Transform -->
+	<!-- <node name="average_acquisition" pkg="projet" type="average_acquisition.py" args="$(arg main_cam)" output="screen"/> -->
+
+    <node name="static_transform_publisher" pkg="tf2_ros" type="static_transform_publisher" args="0 0 0 0 0 0 1 /world /cam$(arg cam_id)"/>
+
+	<include file="$(find alvar_tag_tracking)/launch/unity_camera.launch">
+		<arg name="cam_id" value="4"/>
+	</include>
+
+	<include file="$(find alvar_tag_tracking)/launch/unity_camera.launch">
+		<arg name="cam_id" value="9"/>
+	</include>
+
+</launch>
