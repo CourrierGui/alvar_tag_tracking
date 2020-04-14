@@ -1,0 +1,5 @@
+string source_cam
+string target_cam
+uint32 id
+---
+bool res

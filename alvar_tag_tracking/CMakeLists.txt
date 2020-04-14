@@ -15,6 +15,22 @@ find_package(catkin REQUIRED COMPONENTS
   tf
   tf2
   tf2_ros
+  message_generation
+)
+
+add_message_files(
+   FILES
+   NewTF.msg
+)
+
+add_service_files(
+   FILES
+   calibration.srv
+)
+
+generate_messages(
+  DEPENDENCIES
+  std_msgs
 )
 
 catkin_package(
@@ -25,15 +41,21 @@ catkin_package(
 )
 
 include_directories(
-# include
+  # include
   ${catkin_INCLUDE_DIRS}
 )
+
+add_executable(calibration_server src/calibration_server.cpp)
+target_link_libraries(calibration_server ${catkin_LIBRARIES})
+
+add_executable(calibration_client src/calibration_client.cpp)
+target_link_libraries(calibration_client ${catkin_LIBRARIES})
 
 add_executable(tf_prefixer src/tf_prefixer.cpp)
 target_link_libraries(tf_prefixer ${catkin_LIBRARIES})
 
-# add_executable(new_tf_publisher src/new_tf_publisher.cpp)
-# target_link_libraries(new_tf_publisher ${catkin_LIBRARIES})
+add_executable(new_tf_publisher src/new_tf_publisher.cpp)
+target_link_libraries(new_tf_publisher ${catkin_LIBRARIES})
 
-# add_executable(new_tf_listener src/new_tf_listener.cpp)
-# target_link_libraries(new_tf_listener ${catkin_LIBRARIES})
+add_executable(new_tf_listener src/new_tf_listener.cpp)
+target_link_libraries(new_tf_listener ${catkin_LIBRARIES})

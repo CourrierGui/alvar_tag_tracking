@@ -1,6 +1,7 @@
 <launch> 
 
 	<arg name="cam_id" default="4"/> 
+  <arg name="main_cam" default="cam4"/>
 
   <!-- rviz -->
   <node name="rviz" type="rviz" pkg="rviz"/>
@@ -12,10 +13,10 @@
   <node name="static_transform_publisher" pkg="tf2_ros" type="static_transform_publisher" args="0 0 0 0 0 0 1 /world /cam$(arg cam_id)"/>
 
 	<!-- Listening to AlvarMarkers msgs -->
-	<!-- <node name="new_tf_publisher" pkg="projet" type="new_tf_publisher" output="screen" args="/ar_pose_marker $(arg main_cam)"/> -->
+	<node name="calibration_client" pkg="alvar_tag_tracking" type="calibration_client" output="screen" args="$(arg main_cam)"/>
 
 	<!-- Listening to NewTF msgs -->
-	<!-- <node name="new_tf_listener" pkg="projet" type="new_tf_listener" output="screen" args="/new_tf $(arg main_cam)"/> -->
+	<node name="calibration_server" pkg="alvar_tag_tracking" type="calibration_server" output="screen" args="$(arg main_cam)"/>
 
 	<!-- Node manager -->
 	<!-- <node name="key_input" pkg="projet" type="key_input" args="$(arg main_cam) $(arg nb_cam)" output="screen"/> -->
