@@ -1,43 +1,14 @@
 #include <ros/ros.h>
 #include <tf/transform_listener.h>
-#include <tf/transform_broadcaster.h>
 
 #include <sstream>
 #include <map>
 #include <unordered_set>
 
 #include <alvar_tag_tracking/calibration.h>
+#include "average_tools.hpp"
 
 using calibration_srv = alvar_tag_tracking::calibration;
-
-struct average_tf {
-  tf::Transform tf;
-  int weight;
-  average_tf() : tf(), weight(0) {}
-};
-
-average_tf average(average_tf av_tf, tf::Transform new_tf) {
-  int n = av_tf.weight;
-  tf::Quaternion av_quat = av_tf.tf.getRotation();
-  tf::Vector3    av_vect = av_tf.tf.getOrigin();
-
-  tf::Quaternion new_quat = new_tf.getRotation();
-  tf::Vector3    new_vect = new_tf.getOrigin();
-
-  double x = (av_vect.getX() * n + new_vect.getX())/(n+1);
-  double y = (av_vect.getY() * n + new_vect.getY())/(n+1);
-  double z = (av_vect.getZ() * n + new_vect.getZ())/(n+1);
-
-  double angle = (av_quat.getAngle() * n + new_quat.getAngle())/(n+1);
-  double qx    = (av_quat.getAxis().getX() * n + new_quat.getAxis().getX())/(n+1);
-  double qy    = (av_quat.getAxis().getY() * n + new_quat.getAxis().getY())/(n+1);
-  double qz    = (av_quat.getAxis().getZ() * n + new_quat.getAxis().getZ())/(n+1);
-
-  average_tf res;
-  res.tf = tf::Transform(tf::Quaternion(tf::Vector3(qx, qy, qz), angle), tf::Vector3(x, y, z));
-  res.weight = n+1;
-  return res;
-}
 
 bool calibration(calibration_srv::Request& request,
                  calibration_srv::Response& response,
@@ -65,7 +36,6 @@ bool calibration(calibration_srv::Request& request,
 
     tf::Transform source_to_target = source_cam_to_marker * target_cam_to_marker.inverse();
 
-    tf::Transform old_av = list_of_tfs[request.target_cam].tf;
     list_of_tfs[request.target_cam] = average(list_of_tfs[request.target_cam], source_to_target);
 
     if (list_of_tfs[request.target_cam].weight == 10) {

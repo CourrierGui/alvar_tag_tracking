@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.1.0)
 project(alvar_tag_tracking)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+add_compile_options(-std=c++1z)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -44,6 +44,9 @@ include_directories(
   # include
   ${catkin_INCLUDE_DIRS}
 )
+
+add_executable(average_tf src/average_tf.cpp)
+target_link_libraries(average_tf ${catkin_LIBRARIES})
 
 add_executable(calibration_server src/calibration_server.cpp)
 target_link_libraries(calibration_server ${catkin_LIBRARIES})
