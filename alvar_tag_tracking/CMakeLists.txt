@@ -16,11 +16,15 @@ find_package(catkin REQUIRED COMPONENTS
   tf2
   tf2_ros
   message_generation
+  rqt_gui_cpp
+  rqt_gui
 )
 
+find_package(Qt5Widgets REQUIRED)
+catkin_python_setup()
+
 add_message_files(
-   FILES
-   NewTF.msg
+   # FILES
 )
 
 add_service_files(
@@ -35,15 +39,39 @@ generate_messages(
 
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES alvar_tag_tracking
-#  CATKIN_DEPENDS ar_track_alvar ar_track_alvar_msgs roscpp std_msgs tf tf2 tf2_ros
+  LIBRARIES alvar_tag_tracking
+  CATKIN_DEPENDS ar_track_alvar ar_track_alvar_msgs roscpp std_msgs tf tf2 tf2_ros rqt_gui_cpp
 #  DEPENDS system_lib
 )
+
+set(rqt_calibration_src
+  src/rqt_calibration/rqt_calibration.cpp
+)
+
+set(rqt_calibration_header
+  include/rqt_calibration/rqt_calibration.hpp
+)
+
+set(rqt_calibration_ui
+  src/rqt_calibration/rqt_calibration.ui
+)
+
+qt5_wrap_cpp(rqt_calibration_header_mocs ${rqt_calibration_header})
+qt5_wrap_ui(rqt_calibration_ui_h ${rqt_calibration_ui})
 
 include_directories(
   # include
   ${catkin_INCLUDE_DIRS}
 )
+
+add_library(rqt_calibration
+  ${rqt_calibration_src}
+  ${rqt_calibration_header_mocs}
+  ${rqt_calibration_ui_h}
+)
+qt5_use_modules(rqt_calibration Widgets)
+target_include_directories(rqt_calibration PUBLIC "${CMAKE_SOURCE_DIR}/include" "${CMAKE_BINARY_DIR}")
+target_link_libraries(rqt_calibration ${catkin_LIBRARIES})
 
 add_executable(average_tf src/average_tf.cpp)
 target_link_libraries(average_tf ${catkin_LIBRARIES})
@@ -62,3 +90,17 @@ target_link_libraries(new_tf_publisher ${catkin_LIBRARIES})
 
 add_executable(new_tf_listener src/new_tf_listener.cpp)
 target_link_libraries(new_tf_listener ${catkin_LIBRARIES})
+
+install(PROGRAMS scripts/rqt_calibration
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
+install(DIRECTORY
+  resource
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+)
+
+install(FILES
+  plugin.xml
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+)

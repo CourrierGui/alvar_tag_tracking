@@ -1,0 +1,12 @@
+<library path="lib/librqt_calibration">
+  <class name="rqt_calibration/RqtCalibration" type="rqt_calibration::RqtCalibration" base_class_type="rqt_gui_cpp::Plugin">
+    <description>
+      User interface for calibrating cameras using alvar tag.
+    </description>
+    <qtgui>
+      <label>C++ Plugin for camera calibration</label>
+      <icon type="theme">system-help</icon>
+      <statustip>Provide easy interface for adding cameras to calibrate.</statustip>
+    </qtgui>
+  </class>
+</library>

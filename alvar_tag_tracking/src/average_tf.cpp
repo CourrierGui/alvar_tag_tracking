@@ -85,7 +85,6 @@ void static_tf_callback(
   if (child_frame.front() == '/') {
     child_frame.erase(0, 1);
   }
-  ROS_INFO(child_frame.c_str());
   tf::Transform tf(
     {
       msg->transforms.front().transform.rotation.x,
