@@ -26,13 +26,14 @@ pkg_check_modules(YAML_CPP yaml-cpp REQUIRED)
 find_package(Qt5Widgets REQUIRED)
 catkin_python_setup()
 
-add_message_files(
-   # FILES
-)
+# add_message_files(
+#    # FILES
+# )
 
 add_service_files(
    FILES
-   calibration.srv
+   Calibration.srv
+   LaunchFile.srv
 )
 
 generate_messages(
@@ -93,12 +94,6 @@ target_link_libraries(calibration_client ${catkin_LIBRARIES})
 
 add_executable(tf_prefixer src/tf_prefixer.cpp)
 target_link_libraries(tf_prefixer ${catkin_LIBRARIES})
-
-add_executable(new_tf_publisher src/new_tf_publisher.cpp)
-target_link_libraries(new_tf_publisher ${catkin_LIBRARIES})
-
-add_executable(new_tf_listener src/new_tf_listener.cpp)
-target_link_libraries(new_tf_listener ${catkin_LIBRARIES})
 
 install(PROGRAMS scripts/rqt_calibration
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

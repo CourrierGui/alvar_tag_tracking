@@ -8,10 +8,10 @@
 #include <map>
 #include <unordered_set>
 
-#include <alvar_tag_tracking/calibration.h>
+#include <alvar_tag_tracking/Calibration.h>
 #include "average_tools.hpp"
 
-using calibration_srv = alvar_tag_tracking::calibration;
+using calibration_srv = alvar_tag_tracking::Calibration;
 
 bool calibration(calibration_srv::Request& request,
                  calibration_srv::Response& response,

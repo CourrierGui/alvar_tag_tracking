@@ -14,6 +14,7 @@
 #include <tf2_ros/transform_listener.h>
 #include <tf2_ros/static_transform_broadcaster.h>
 #include <geometry_msgs/TransformStamped.h>
+#include <alvar_tag_tracking/LaunchFile.h>
 
 #include <QList>
 #include <QStringList>
@@ -51,7 +52,8 @@ public slots:
 private:
   Ui_RqtCalibration ui;
   QWidget* widget;
-  ros::Subscriber subscriber;
+  ros::Subscriber image_sub;
+  ros::ServiceClient launcher_start;
   QString main_cam;
   double marker_size;
   QPushButton* current_button;

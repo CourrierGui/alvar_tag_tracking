@@ -20,6 +20,7 @@ void RqtCalibration::initPlugin(qt_gui_cpp::PluginContext& context) {
   context.addWidget(widget);
   ui.scroll_layout->setAlignment(Qt::AlignTop);
 
+
   ros::NodeHandle pn = getNodeHandle();
   if (pn.hasParam("marker_size")) {
     pn.getParam("marker_size", marker_size);
@@ -30,6 +31,9 @@ void RqtCalibration::initPlugin(qt_gui_cpp::PluginContext& context) {
     main_cam = QString(tmp.c_str());
   }
   init_args();
+
+  ros::NodeHandle n = getNodeHandle();
+  launcher_start = n.serviceClient<alvar_tag_tracking::LaunchFile>( "/launch");
 
   QObject::connect(ui.main_cam_edit,    SIGNAL(editingFinished()), this, SLOT(set_main_cam())    );
   QObject::connect(ui.marker_size_spin, SIGNAL(editingFinished()), this, SLOT(set_marker_size()) );
@@ -56,19 +60,18 @@ void RqtCalibration::new_cam_win() {
 }
 
 void RqtCalibration::launch_cam(const NewCamDialog::Settings& settings) {
-  std::string cmd = "roslaunch alvar_tag_tracking "
-    + settings.launch_file.toStdString()
-    + " cam_id:="
-    + settings.cam_id.toStdString()
-    + " marker_size:="
-    + QString::number(marker_size).replace(',', '.').toStdString()
-    + " main_cam:="
-    + main_cam.toStdString()
-    + ' '
-    + settings.args.toStdString()
-    + " &";
+  //TODO: 
+  alvar_tag_tracking::LaunchFile lf;
+  lf.request.package = "alvar_tag_tracking";
+  lf.request.filename = settings.launch_file.toStdString();
+  lf.request.main_cam = main_cam.toStdString();
+  lf.request.id = settings.cam_id.toStdString();
+  //TODO: handle additionnal arguments
 
-  system(cmd.c_str());
+  if (!launcher_start.call(lf)) {
+    ROS_ERROR("Failed to call service alvar_tag_tracking::LaunchFile.");
+    return;
+  }
 
   QWidget* widget = new QWidget;
   QHBoxLayout* layout = new QHBoxLayout;
@@ -104,7 +107,7 @@ void RqtCalibration::change_cam_sub() {
 
 void RqtCalibration::update_topic(const std::string& cam_name) {
   ros::NodeHandle n = getNodeHandle();
-  subscriber =
+  image_sub =
     n.subscribe('/'+cam_name+"/image_raw", 0, &RqtCalibration::image_callback, this);
 }
 
@@ -204,7 +207,7 @@ void RqtCalibration::saveSettings(qt_gui_cpp::Settings& plugin_settings,
   instance_settings.setValue("main_cam",    main_cam   );
   instance_settings.setValue("marker_size", marker_size);
 
-  QString topic = subscriber.getTopic().c_str();
+  QString topic = image_sub.getTopic().c_str();
   int id = topic.lastIndexOf('/');
   topic.remove(id, topic.size() - id);
   topic.remove(0, 1);

@@ -5,7 +5,7 @@
 
 #include <ros/ros.h>
 
-#include <alvar_tag_tracking/calibration.h>
+#include <alvar_tag_tracking/Calibration.h>
 #include <ar_track_alvar_msgs/AlvarMarkers.h>
 
 void marker_pose_callback(
@@ -26,7 +26,7 @@ void marker_pose_callback(
     if (calibrated_cameras.find(camera) == calibrated_cameras.end()) {
       for (auto cam: cameras) {
         if (calibrated_cameras.find(cam.first) != calibrated_cameras.end()) {
-          alvar_tag_tracking::calibration srv;
+          alvar_tag_tracking::Calibration srv;
           srv.request.source_cam = cam.first;
           srv.request.target_cam = camera;
           srv.request.id = msg->markers.front().id;
@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
   }
 
   ros::NodeHandle n;
-  ros::ServiceClient service = n.serviceClient<alvar_tag_tracking::calibration>("calibration");
+  ros::ServiceClient service = n.serviceClient<alvar_tag_tracking::Calibration>("calibration");
 
   std::map<std::string, ros::Time> cameras;
   std::unordered_set<std::string>  calibrated_cameras = {main_cam};
