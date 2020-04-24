@@ -8,7 +8,7 @@
 #include <geometry_msgs/Pose.h>
 #include <tf2_msgs/TFMessage.h>
 #include <ar_track_alvar_msgs/AlvarMarkers.h>
-#include <tf/transform_broadcaster.h>
+#include <tf2_ros/transform_broadcaster.h>
 
 #include "average_tools.hpp"
 
@@ -23,9 +23,9 @@ using marker_struct = std::multimap<int, cam_info>;
 void marker_callback(
   const boost::shared_ptr<ar_track_alvar_msgs::AlvarMarkers const> msg,
   const std::string& main_cam,
-  const std::map<std::string, tf::Transform>& calibrated_cameras,
+  const std::map<std::string, tf2::Transform>& calibrated_cameras,
   marker_struct& markers,
-  tf::TransformBroadcaster& tf_broadcaster)
+  tf2_ros::TransformBroadcaster& tf_broadcaster)
 {
   const auto& marker = msg->markers.front();
 
@@ -53,7 +53,7 @@ void marker_callback(
       markers.erase(cam);
       continue;
     }
-    tf::Transform new_tf(
+    tf2::Transform new_tf(
       {
         camera.pose.orientation.x,
         camera.pose.orientation.y,
@@ -72,20 +72,32 @@ void marker_callback(
   std::string child_frame = "/average/ar_marker_" + std::to_string(marker.id);
 
   normalize(av_tf.tf);
-  tf_broadcaster.sendTransform(
-    tf::StampedTransform(av_tf.tf, ros::Time::now(), main_cam, child_frame)
-  );
+  geometry_msgs::TransformStamped tf;  //{ av_tf.tf, ros::Time::now(), main_cam, child_frame }
+  tf.header.stamp = ros::Time::now();
+  tf.header.frame_id = main_cam;
+  tf.child_frame_id = child_frame;
+
+  tf.transform.rotation.x = av_tf.tf.getRotation().getX();
+  tf.transform.rotation.y = av_tf.tf.getRotation().getY();
+  tf.transform.rotation.z = av_tf.tf.getRotation().getZ();
+  tf.transform.rotation.w = av_tf.tf.getRotation().getW();
+
+  tf.transform.translation.x = av_tf.tf.getOrigin().getX();
+  tf.transform.translation.y = av_tf.tf.getOrigin().getY();
+  tf.transform.translation.z = av_tf.tf.getOrigin().getZ();
+
+  tf_broadcaster.sendTransform(tf);
 }
 
 void static_tf_callback(
   const boost::shared_ptr<tf2_msgs::TFMessage const> msg,
-  std::map<std::string, tf::Transform>& calibrated_cameras)
+  std::map<std::string, tf2::Transform>& calibrated_cameras)
 {
   std::string child_frame = msg->transforms.front().child_frame_id;
   if (child_frame.front() == '/') {
     child_frame.erase(0, 1);
   }
-  tf::Transform tf(
+  tf2::Transform tf(
     {
       msg->transforms.front().transform.rotation.x,
       msg->transforms.front().transform.rotation.y,
@@ -119,10 +131,10 @@ int main(int argc, char** argv) {
   }
 
   ros::NodeHandle n;
-  tf::TransformBroadcaster tf_broadcaster;
-  std::map<std::string, tf::Transform> calibrated_cameras;
+  tf2_ros::TransformBroadcaster tf_broadcaster;
+  std::map<std::string, tf2::Transform> calibrated_cameras;
   marker_struct markers;
-  calibrated_cameras[main_cam] = tf::Transform();
+  calibrated_cameras[main_cam] = tf2::Transform();
 
   auto pose_cb = boost::bind(
     marker_callback, _1,

@@ -1,5 +1,8 @@
 #include <ros/ros.h>
-#include <tf/transform_listener.h>
+#include <tf2_ros/transform_listener.h>
+#include <tf2_ros/static_transform_broadcaster.h>
+#include <tf2/LinearMath/Transform.h>
+#include <geometry_msgs/TransformStamped.h>
 
 #include <sstream>
 #include <map>
@@ -12,52 +15,38 @@ using calibration_srv = alvar_tag_tracking::calibration;
 
 bool calibration(calibration_srv::Request& request,
                  calibration_srv::Response& response,
-                 const tf::TransformListener& tf_listener,
+                 const tf2_ros::Buffer& tf_buffer,
+                 const tf2_ros::TransformListener& tf_listener,
                  std::unordered_set<std::string>& calibrated_cameras,
-                 std::map<std::string, average_tf>& list_of_tfs)
+                 std::map<std::string, average_tf>& list_of_tfs,
+                 tf2_ros::StaticTransformBroadcaster& tf_broadcaster)
 {
   std::string marker = "/ar_marker_" + std::to_string(request.id);
-  tf::StampedTransform source_cam_to_marker;
-  tf::StampedTransform target_cam_to_marker;
+  geometry_msgs::TransformStamped source_cam_to_marker;
+  geometry_msgs::TransformStamped target_cam_to_marker;
   response.res = false;
 
-  if (   tf_listener.canTransform(request.target_cam, request.target_cam + marker, ros::Time(0))
-      && tf_listener.canTransform(request.source_cam + marker, request.source_cam, ros::Time(0))
+  if (   tf_buffer.canTransform(request.target_cam, request.target_cam + marker, ros::Time(0))
+      && tf_buffer.canTransform(request.source_cam + marker, request.source_cam, ros::Time(0))
       && calibrated_cameras.find(request.target_cam) == calibrated_cameras.end())
   {
-    tf_listener.lookupTransform(request.source_cam,
-                                request.source_cam + marker,
-                                ros::Time(0),
-                                source_cam_to_marker);
-    tf_listener.lookupTransform(request.target_cam,
-                                request.target_cam + marker,
-                                ros::Time(0),
-                                target_cam_to_marker);
+    source_cam_to_marker = tf_buffer.lookupTransform(request.source_cam,
+                                                     request.source_cam + marker,
+                                                     ros::Time(0));
+    target_cam_to_marker = tf_buffer.lookupTransform(request.target_cam,
+                              request.target_cam + marker,
+                              ros::Time(0));
 
-    tf::Transform source_to_target = source_cam_to_marker * target_cam_to_marker.inverse();
+    tf2::Transform source_to_target =
+      convert(source_cam_to_marker) * convert(target_cam_to_marker).inverse();
 
     list_of_tfs[request.target_cam] = average(list_of_tfs[request.target_cam], source_to_target);
 
     if (list_of_tfs[request.target_cam].weight == 10) {
-      tf::StampedTransform transform(
-        list_of_tfs[request.target_cam].tf,
-        ros::Time::now(),
-        request.source_cam,
-        request.target_cam);
+      geometry_msgs::TransformStamped transform =
+        tf_to_msg(source_to_target, ros::Time::now(), request.source_cam, request.target_cam);
 
-      std::stringstream os;
-      os << "rosrun tf2_ros static_transform_publisher "
-        << transform.getOrigin().getX() << ' '
-        << transform.getOrigin().getY() << ' '
-        << transform.getOrigin().getZ() << ' '
-        << transform.getRotation().getX() << ' '
-        << transform.getRotation().getY() << ' '
-        << transform.getRotation().getZ() << ' '
-        << transform.getRotation().getW() << ' '
-        << request.source_cam << ' '
-        << request.target_cam << " &";
-      std::string cmd = os.str();
-      system(cmd.c_str());
+      tf_broadcaster.sendTransform(transform);
 
       calibrated_cameras.insert(request.target_cam);
       response.res = true;
@@ -87,15 +76,19 @@ int main(int argc, char** argv) {
 
   std::map<std::string, average_tf> list_of_tfs;
   std::unordered_set<std::string>  calibrated_cameras = {main_cam};
-  tf::TransformListener tf_listener(n);
+  tf2_ros::Buffer tf_buffer;
+  tf2_ros::TransformListener tf_listener(tf_buffer);
+  tf2_ros::StaticTransformBroadcaster tf_broadcaster;
 
   auto callback = boost::bind(
     calibration,
     _1,
     _2,
+    boost::ref(tf_buffer),
     boost::ref(tf_listener),
     boost::ref(calibrated_cameras),
-    boost::ref(list_of_tfs));
+    boost::ref(list_of_tfs),
+    boost::ref(tf_broadcaster));
 
   ros::ServiceServer service
     = n.advertiseService<calibration_srv::Request,calibration_srv::Response>("calibration", callback);

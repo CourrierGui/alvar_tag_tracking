@@ -1,0 +1,60 @@
+<launch> 
+
+  <arg name="cam_id" default="4"/> 
+  <arg name="main_cam" default="unity_cam_4"/>
+  <arg name="marker_size" default="50.0"/>
+
+    <!-- rviz -->
+  <node name="rviz" type="rviz" pkg="rviz" args="-d $(find alvar_tag_tracking)/share/rviz/config.rviz"/>
+
+    <!-- Prefixing tfs -->
+  <node name="tf_prefixer" pkg="alvar_tag_tracking" type="tf_prefixer" output="screen" args="/tf0"/>
+
+    <!-- Publish transform from world to main_cam -->
+  <node name="static_transform_publisher" pkg="tf2_ros" type="static_transform_publisher" args="0 0 0 0 0 0 1 /world $(arg main_cam)"/>
+
+    <!-- Calibration service client -->
+  <node name="calibration_client" pkg="alvar_tag_tracking" type="calibration_client" output="screen" args="$(arg main_cam)"/>
+
+    <!-- Calibration service server -->
+  <node name="calibration_server" pkg="alvar_tag_tracking" type="calibration_server" output="screen" args="$(arg main_cam)"/>
+
+    <!-- Compute the average position of a tag -->
+  <node name="average_tf" pkg="alvar_tag_tracking" type="average_tf" output="screen" args="$(arg main_cam)"/>
+
+    <!-- RqtCalibration GUI -->
+  <node name="rqt_calibration" pkg="alvar_tag_tracking" type="rqt_calibration" output="screen">
+    <param name="main_cam"    value="$(arg main_cam)"/>
+    <param name="marker_size" value="$(arg marker_size)"/>
+  </node>
+
+  <!-- <include file="$(find alvar_tag_tracking)/launch/unity_camera.launch"> -->
+  <!--   <arg name="cam_id"   value="1"                      /> -->
+  <!--   <arg name="main_cam" value="$(arg main_cam)"        /> -->
+  <!--   <arg name="marker_size" default="$(arg marker_size)"/> -->
+  <!-- </include> -->
+
+  <!-- <include file="$(find alvar_tag_tracking)/launch/unity_camera.launch"> -->
+  <!--   <arg name="cam_id"   value="2"                      /> -->
+  <!--   <arg name="main_cam" value="$(arg main_cam)"        /> -->
+  <!--   <arg name="marker_size" default="$(arg marker_size)"/> -->
+  <!-- </include> -->
+
+  <!-- <include file="$(find alvar_tag_tracking)/launch/unity_camera.launch"> -->
+  <!--   <arg name="cam_id"   value="3"                      /> -->
+  <!--   <arg name="main_cam" value="$(arg main_cam)"        /> -->
+  <!--   <arg name="marker_size" default="$(arg marker_size)"/> -->
+  <!-- </include> -->
+
+  <!-- <include file="$(find alvar_tag_tracking)/launch/unity_camera.launch"> -->
+  <!--   <arg name="cam_id"   value="4"                      /> -->
+  <!--   <arg name="main_cam" value="$(arg main_cam)"        /> -->
+  <!--   <arg name="marker_size" default="$(arg marker_size)"/> -->
+  <!-- </include> -->
+
+  <!-- <include file="$(find alvar_tag_tracking)/launch/unity_camera.launch"> -->
+  <!--   <arg name="cam_id"   value="5"                      /> -->
+  <!--   <arg name="main_cam" value="$(arg main_cam)"        /> -->
+  <!--   <arg name="marker_size" default="$(arg marker_size)"/> -->
+  <!-- </include> -->
+</launch>

@@ -20,6 +20,9 @@ find_package(catkin REQUIRED COMPONENTS
   rqt_gui
 )
 
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(YAML_CPP yaml-cpp REQUIRED)
+
 find_package(Qt5Widgets REQUIRED)
 catkin_python_setup()
 
@@ -46,14 +49,17 @@ catkin_package(
 
 set(rqt_calibration_src
   src/rqt_calibration/rqt_calibration.cpp
+  src/rqt_calibration/new_cam_dialog.cpp
 )
 
 set(rqt_calibration_header
   include/rqt_calibration/rqt_calibration.hpp
+  include/rqt_calibration/new_cam_dialog.hpp
 )
 
 set(rqt_calibration_ui
   src/rqt_calibration/rqt_calibration.ui
+  src/rqt_calibration/new_cam_dialog.ui
 )
 
 qt5_wrap_cpp(rqt_calibration_header_mocs ${rqt_calibration_header})
@@ -71,7 +77,10 @@ add_library(rqt_calibration
 )
 qt5_use_modules(rqt_calibration Widgets)
 target_include_directories(rqt_calibration PUBLIC "${CMAKE_SOURCE_DIR}/include" "${CMAKE_BINARY_DIR}")
-target_link_libraries(rqt_calibration ${catkin_LIBRARIES})
+target_link_libraries(rqt_calibration ${catkin_LIBRARIES} stdc++fs)
+target_link_libraries     (rqt_calibration ${YAML_LIBRARIES})
+target_link_libraries     (rqt_calibration ${YAML_CPP_LDFLAGS})
+target_include_directories(rqt_calibration SYSTEM PUBLIC ${YAML_INCLUDE_DIRS})
 
 add_executable(average_tf src/average_tf.cpp)
 target_link_libraries(average_tf ${catkin_LIBRARIES})
