@@ -1,11 +1,12 @@
 <launch> 
-	<arg name="cam_id"       default="0"                         /> 
-	<arg name="video_id"     default="0"                         /> 
-	<arg name="ar_node_name" default="individualMarkersNoKinect" />
-	<arg name="bundle_files" default=""                          />
+	<arg name="cam_id"            default="0"                         /> 
+	<arg name="ar_node_name"      default="individualMarkersNoKinect" />
+	<arg name="bundle_files"      default=""                          />
+    <arg name="marker_size"       default="50.0"                      />
+    <arg name="calibration_file"  default="$(find alvar_tag_tracking)/share/calibration/webcam/webcam.yaml"/>
 
 	<!-- Parameters --> 
-	<arg name="cam_name"             default="usb_cam_$(arg cam_id)_$(arg video_id)"/>
+	<arg name="cam_name"             default="usb_cam_$(arg cam_id)"                />
 	<arg name="marker_size"          default="5.7"                                  />
 	<arg name="max_new_marker_error" default="0.08"                                 />
 	<arg name="max_track_error"      default="0.2"                                  />

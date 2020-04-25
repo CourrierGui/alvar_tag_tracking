@@ -99,11 +99,12 @@ void RqtCalibration::calibrate() {
 
 void RqtCalibration::launch_cam(const NewCamDialog::Settings& settings) {
   alvar_tag_tracking::LaunchFile lf;
-  lf.request.package  = "alvar_tag_tracking";
-  lf.request.filename = settings.launch_file.toStdString();
-  lf.request.main_cam = main_cam.toStdString();
-  lf.request.id       = settings.cam_id.toStdString();
-  lf.request.type     = settings.type.toStdString();
+  lf.request.package          = "alvar_tag_tracking";
+  lf.request.filename         = settings.launch_file.toStdString();
+  lf.request.calibration_file = settings.calibration_file.toStdString();
+  lf.request.main_cam         = main_cam.toStdString();
+  lf.request.id               = settings.cam_id.toStdString();
+  lf.request.type             = settings.type.toStdString();
   //TODO: handle additionnal arguments
 
   if (!launcher_start.call(lf)) {
@@ -210,6 +211,7 @@ void RqtCalibration::load_calibration() {
     } else {
       ROS_WARN("Invalid transform for: %s", cam_name.c_str());
     }
+    //TODO: launch nodes and add buttons
   }
 }
 

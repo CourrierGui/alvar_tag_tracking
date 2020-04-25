@@ -15,13 +15,14 @@
 namespace rqt_calibration {
 
 
-  //TODO: add more than one camera at a time ?
+//TODO: add more than one camera at a time ?
 class NewCamDialog : public QDialog {
   Q_OBJECT;
 
 public:
   struct Settings {
     QString launch_file;
+    QString calibration_file;
     QString cam_id;
     QString args;
     QString type;
@@ -40,6 +41,7 @@ public slots:
   void set_args();
   void set_type(int index);
   void set_launch_file(int index);
+  void browse_calibration();
 
 private:
   Ui_Dialog ui;
@@ -47,9 +49,9 @@ private:
   QPushButton* cancel_button;
 
   QString launch_file;
+  QString calibration_file;
   QString cam_id;
   QString args;
   QString type;
 };
-
 }

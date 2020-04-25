@@ -24,7 +24,8 @@ class Launcher:
             req.package,
             req.filename,
             "cam_id:="+req.id,
-            "main_cam:="+req.main_cam
+            "main_cam:="+req.main_cam,
+            "calibration_file:="+req.calibration_file
         ]
         cam_name = req.type + '_cam_' + req.id
 

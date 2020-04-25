@@ -1,5 +1,6 @@
 string package
 string filename
+string calibration_file
 string main_cam
 string id
 string type
