@@ -46,8 +46,7 @@ void marker_pose_callback(
 
 void on_reconf(
   const boost::shared_ptr<std_msgs::String const> msg,
-  std::unordered_set<std::string>& cameras,
-  const std::string& main_cam) //TODO: is main_cam usefull ?
+  std::unordered_set<std::string>& cameras)
 {
   const std::string& cam_name = msg->data;
   if (cameras.count(cam_name)) {
@@ -90,10 +89,8 @@ int main(int argc, char** argv) {
     boost::ref(calibrated_cameras));
 
   auto reconf = boost::bind(
-      on_reconf,
-      _1,
-      boost::ref(calibrated_cameras),
-      boost::ref(main_cam));
+      on_reconf, _1,
+      boost::ref(calibrated_cameras));
 
   ros::Subscriber pose_sub =
     n.subscribe<ar_track_alvar_msgs::AlvarMarkers>("/ar_pose_marker", 0, callback);

@@ -44,8 +44,7 @@ bool calibration(calibration_srv::Request& request,
 
     list_of_tfs[request.target_cam] = average(list_of_tfs[request.target_cam], source_to_target);
 
-    //TODO: == -> >=
-    if (list_of_tfs[request.target_cam].weight == 10) {
+    if (list_of_tfs[request.target_cam].weight >= 10) {
       geometry_msgs::TransformStamped transform =
         tf_to_msg(source_to_target, ros::Time::now(), request.source_cam, request.target_cam);
 
