@@ -4,6 +4,7 @@
 
 #include <ros/ros.h>
 
+#include <std_msgs/String.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <geometry_msgs/Pose.h>
 #include <tf2_msgs/TFMessage.h>
@@ -66,8 +67,10 @@ void marker_callback(
         camera.pose.position.z
       }
     );
-    new_tf = calibrated_cameras.at(camera.name) * new_tf;
-    av_tf = average(av_tf, new_tf);
+    if (auto it=calibrated_cameras.find(camera.name); it!=calibrated_cameras.end()) {
+      new_tf = it->second * new_tf;
+      av_tf = average(av_tf, new_tf);
+    }
   }
   std::string child_frame = "/average/ar_marker_" + std::to_string(marker.id);
 
@@ -113,6 +116,22 @@ void static_tf_callback(
   calibrated_cameras[child_frame] = tf;
 }
 
+void on_reconf(
+  const boost::shared_ptr<std_msgs::String const> msg,
+  std::map<std::string, tf2::Transform>& cameras,
+  const std::string& main_cam)
+{
+  const std::string& cam_name = msg->data;
+
+  if (auto it = cameras.find(cam_name); it!=cameras.end()) {
+    cameras.erase(it);
+    ROS_INFO("Removing camera %s's transform", msg->data.c_str());
+  } else {
+    ROS_WARN("Camera not found");
+  }
+}
+
+//TODO: segfault if cam doesn't see tag
 int main(int argc, char** argv) {
   ros::init(argc, argv, "average_tf");
 
@@ -147,10 +166,17 @@ int main(int argc, char** argv) {
     static_tf_callback, _1,
     boost::ref(calibrated_cameras));
 
+  auto reconf = boost::bind(
+    on_reconf,
+    _1,
+    boost::ref(calibrated_cameras),
+    boost::ref(main_cam));
+
   ros::Subscriber pose_sub =
     n.subscribe<ar_track_alvar_msgs::AlvarMarkers>("/ar_pose_marker", 0, pose_cb);
   ros::Subscriber tf_sub =
     n.subscribe<tf2_msgs::TFMessage>("/tf_static", 0, tf_cb);
+  ros::Subscriber reconf_sub = n.subscribe<std_msgs::String>("/reconfigure", 10, reconf);
 
   ros::spin();
   return 0;

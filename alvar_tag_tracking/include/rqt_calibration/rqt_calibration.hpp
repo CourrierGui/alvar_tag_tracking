@@ -10,6 +10,7 @@
 #include <ros/ros.h>
 #include <sensor_msgs/Image.h>
 
+#include <std_msgs/String.h>
 #include <rqt_calibration/new_cam_dialog.hpp>
 #include <tf2_ros/transform_listener.h>
 #include <tf2_ros/static_transform_broadcaster.h>
@@ -39,6 +40,7 @@ public:
   void image_callback(const sensor_msgs::Image& msg);
   void init_args();
   void update_topic(const std::string& cam_name);
+  void calibrated_callback(const std_msgs::String& camera);
 
 public slots:
   void set_main_cam();
@@ -48,12 +50,17 @@ public slots:
   void change_cam_sub();
   void load_calibration();
   void save_calibration();
+  void remove_cam();
+  void calibrate();
 
 private:
   Ui_RqtCalibration ui;
   QWidget* widget;
   ros::Subscriber image_sub;
+  ros::Subscriber calibrated_sub;
+  ros::Publisher reconf_pub;
   ros::ServiceClient launcher_start;
+  ros::ServiceClient launcher_stop;
   QString main_cam;
   double marker_size;
   QPushButton* current_button;

@@ -2,6 +2,7 @@ string package
 string filename
 string main_cam
 string id
+string type
 string[] args
 string[] values
 ---

@@ -13,13 +13,10 @@ RqtCalibration::RqtCalibration()
 }
 
 void RqtCalibration::initPlugin(qt_gui_cpp::PluginContext& context) {
-  QStringList argv = context.argv();
-
   widget = new QWidget();
   ui.setupUi(widget);
   context.addWidget(widget);
   ui.scroll_layout->setAlignment(Qt::AlignTop);
-
 
   ros::NodeHandle pn = getNodeHandle();
   if (pn.hasParam("marker_size")) {
@@ -33,7 +30,11 @@ void RqtCalibration::initPlugin(qt_gui_cpp::PluginContext& context) {
   init_args();
 
   ros::NodeHandle n = getNodeHandle();
-  launcher_start = n.serviceClient<alvar_tag_tracking::LaunchFile>( "/launch");
+  launcher_start = n.serviceClient<alvar_tag_tracking::LaunchFile>( "/launcher/launch");
+  launcher_stop  = n.serviceClient<alvar_tag_tracking::LaunchFile>( "/launcher/stop"  );
+  reconf_pub = n.advertise<std_msgs::String>("/reconfigure", 10);
+  calibrated_sub =
+    n.subscribe("/calibrated", 0, &RqtCalibration::calibrated_callback, this);
 
   QObject::connect(ui.main_cam_edit,    SIGNAL(editingFinished()), this, SLOT(set_main_cam())    );
   QObject::connect(ui.marker_size_spin, SIGNAL(editingFinished()), this, SLOT(set_marker_size()) );
@@ -45,6 +46,12 @@ void RqtCalibration::initPlugin(qt_gui_cpp::PluginContext& context) {
 void RqtCalibration::init_args() {
   ui.main_cam_edit->setText(main_cam);
   ui.marker_size_spin->setValue(marker_size);
+}
+
+void RqtCalibration::calibrated_callback(const std_msgs::String& camera) {
+  QWidget* widget = ui.scroll_contents->findChild<QWidget*>(camera.data.c_str());
+  QPushButton* button = widget->findChild<QPushButton*>("calibrate");
+  button->setEnabled(true);
 }
 
 void RqtCalibration::image_callback(const sensor_msgs::Image& msg) {
@@ -59,13 +66,44 @@ void RqtCalibration::new_cam_win() {
   win->show();
 }
 
+void RqtCalibration::remove_cam() {
+  QPushButton* stop_button = qobject_cast<QPushButton*>(sender());
+  QObject* parent = stop_button->parent();
+  QPushButton* button = parent->findChild<QPushButton*>("cam_button");
+  if (button != nullptr) {
+    const QString& cam_name = button->text();
+    alvar_tag_tracking::LaunchFile lf;
+
+    lf.request.type = cam_name.section('_', 0, 0).toStdString();
+    lf.request.id = cam_name.section('_', 2).toStdString();
+    if (launcher_stop.call(lf)) {
+      //Remove buttons
+      parent->deleteLater();
+      //Notifiy that the camera is no longer calibrated
+      std_msgs::String msg;
+      msg.data = cam_name.toStdString();
+      reconf_pub.publish(msg);
+      ROS_INFO("Stopping camera: %s", cam_name.toStdString().c_str());
+    }
+  }
+}
+
+void RqtCalibration::calibrate() {
+  QPushButton* calibrate = qobject_cast<QPushButton*>(sender());
+  QObject* parent = calibrate->parent();
+  QPushButton* button = parent->findChild<QPushButton*>("cam_button");
+  std_msgs::String msg;
+  msg.data = button->text().toStdString();
+  reconf_pub.publish(msg);
+}
+
 void RqtCalibration::launch_cam(const NewCamDialog::Settings& settings) {
-  //TODO: 
   alvar_tag_tracking::LaunchFile lf;
-  lf.request.package = "alvar_tag_tracking";
+  lf.request.package  = "alvar_tag_tracking";
   lf.request.filename = settings.launch_file.toStdString();
   lf.request.main_cam = main_cam.toStdString();
-  lf.request.id = settings.cam_id.toStdString();
+  lf.request.id       = settings.cam_id.toStdString();
+  lf.request.type     = settings.type.toStdString();
   //TODO: handle additionnal arguments
 
   if (!launcher_start.call(lf)) {
@@ -73,17 +111,33 @@ void RqtCalibration::launch_cam(const NewCamDialog::Settings& settings) {
     return;
   }
 
-  QWidget* widget = new QWidget;
-  QHBoxLayout* layout = new QHBoxLayout;
-  widget->setLayout(layout);
+  QString cam_name = settings.type + "_cam_" + settings.cam_id;
 
-  QPushButton* button = new QPushButton(settings.type+"_cam_"+settings.cam_id);
-  layout->addWidget(button);
+  QWidget*     widget   = new QWidget;
+  QHBoxLayout* h_layout = new QHBoxLayout;
+  QVBoxLayout* v_layout = new QVBoxLayout;
+  widget->setObjectName(cam_name);
+  widget->setLayout(v_layout);
+  //TODO: segfault when adding new cam right after deleting it.
+  // maybe because of the object name ?
+
+  QPushButton* button    = new QPushButton(cam_name   );
+  QPushButton* stop      = new QPushButton("Stop"     );
+  QPushButton* calibrate = new QPushButton("Calibrate");
+  v_layout->addWidget(button   );
+  h_layout->addWidget(stop     );
+  h_layout->addWidget(calibrate);
+  v_layout->addLayout(h_layout );
+  QObject::connect(button,    SIGNAL(clicked()), this, SLOT(change_cam_sub()));
+  QObject::connect(stop,      SIGNAL(clicked()), this, SLOT(remove_cam()    ));
+  QObject::connect(calibrate, SIGNAL(clicked()), this, SLOT(calibrate()     ));
+  button->setObjectName("cam_button");
+  calibrate->setObjectName("calibrate");
 
   ui.scroll_layout->addWidget(widget);
-  QObject::connect(button, SIGNAL(clicked()), this, SLOT(change_cam_sub()));
   update_topic(button->text().toStdString());
   button->setEnabled(false);
+  calibrate->setEnabled(false);
 
   if (current_button != nullptr)
     current_button->setEnabled(true);
@@ -121,6 +175,7 @@ void RqtCalibration::set_marker_size() {
 
 void RqtCalibration::shutdownPlugin() {
   // unregister all publishers here
+  // TODO
 }
 
 void RqtCalibration::load_calibration() {
@@ -188,8 +243,8 @@ void RqtCalibration::save_calibration() {
       continue;
     }
   }
-  settings["cameras"] = cameras;
-  settings["main_cam"] = main_cam.toStdString();
+  settings["cameras"]     = cameras;
+  settings["main_cam"]    = main_cam.toStdString();
   settings["marker_size"] = marker_size;
 
   QString filename = QFileDialog::getSaveFileName(
@@ -213,7 +268,6 @@ void RqtCalibration::saveSettings(qt_gui_cpp::Settings& plugin_settings,
   topic.remove(0, 1);
 
   instance_settings.setValue("topic", topic);
-  //TODO: save transforms
 }
 
 void RqtCalibration::restoreSettings(const qt_gui_cpp::Settings& plugin_settings,
@@ -227,7 +281,6 @@ void RqtCalibration::restoreSettings(const qt_gui_cpp::Settings& plugin_settings
 
   QString topic = instance_settings.value("topic").toString();
   update_topic(topic.toStdString());
-  //TODO: load transforms
 }
 
 /*bool hasConfiguration() const

@@ -6,15 +6,16 @@ from threading import Lock
 import roslaunch
 import rospy
 
-launch_files = []
+launch_files = {}
+to_stop = []
+running = {}
 mutex = Lock()
 
 
 class Launcher:
     def __init__(self, uuid):
-        rospy.Service("launch", LaunchFile, self.on_launch)
-        rospy.Service("stop", LaunchFile, self.on_stop)
-        self.launch_files = []
+        rospy.Service("~launch", LaunchFile, self.on_launch)
+        rospy.Service("~stop", LaunchFile, self.on_stop)
         self.uuid = uuid
         roslaunch.configure_logging(self.uuid)
 
@@ -25,6 +26,7 @@ class Launcher:
             "cam_id:="+req.id,
             "main_cam:="+req.main_cam
         ]
+        cam_name = req.type + '_cam_' + req.id
 
         for i in range(len(req.args)):
             args.append(req.args[i]+":="+req.values[i])
@@ -34,15 +36,20 @@ class Launcher:
 
         launch = roslaunch.parent.ROSLaunchParent(self.uuid, [(launch_file, launch_args)])
         mutex.acquire()
-        launch_files.append(launch)
+        launch_files[cam_name] = launch
         mutex.release()
-
-        rospy.loginfo("Launch file started")
 
         return True
 
     def on_stop(self, req):
-        pass
+        mutex.acquire()
+        cam_name = req.type + '_cam_' + req.id
+
+        to_stop.append(running[cam_name])
+        del running[cam_name]
+
+        mutex.release()
+        return True
 
 
 if __name__ == '__main__':
@@ -53,8 +60,14 @@ if __name__ == '__main__':
 
     while not rospy.is_shutdown():
         mutex.acquire()
-        for launch in launch_files:
+        for key, launch in launch_files.items():
             launch.start()
-            launch_files.remove(launch)
+            del launch_files[key]
+            running[key] = launch
+
+        for launch in to_stop:
+            launch.shutdown()
+            to_stop.remove(launch)
+
         mutex.release()
         rate.sleep()

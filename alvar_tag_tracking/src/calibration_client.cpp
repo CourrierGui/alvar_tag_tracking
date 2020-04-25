@@ -7,6 +7,7 @@
 
 #include <alvar_tag_tracking/Calibration.h>
 #include <ar_track_alvar_msgs/AlvarMarkers.h>
+#include <std_msgs/String.h>
 
 void marker_pose_callback(
   const boost::shared_ptr<ar_track_alvar_msgs::AlvarMarkers const> msg,
@@ -30,15 +31,31 @@ void marker_pose_callback(
           srv.request.source_cam = cam.first;
           srv.request.target_cam = camera;
           srv.request.id = msg->markers.front().id;
+          //TODO: camera recalibrated during shutdown
 
           if (calibration_srv.call(srv)) {
             if (srv.response.res) {
-              calibrated_cameras.insert(cam.first);
+              calibrated_cameras.insert(camera);
             }
           }
         }
       }
     }
+  }
+}
+
+void on_reconf(
+  const boost::shared_ptr<std_msgs::String const> msg,
+  std::unordered_set<std::string>& cameras,
+  const std::string& main_cam) //TODO: is main_cam usefull ?
+{
+  const std::string& cam_name = msg->data;
+  if (cameras.count(cam_name)) {
+    cameras.erase(cam_name);
+    ROS_INFO("Client: removing camera %s's transform", cam_name.c_str());
+  }
+  else {
+    ROS_WARN("Client: camera not found");
   }
 }
 
@@ -72,7 +89,16 @@ int main(int argc, char** argv) {
     boost::ref(cameras),
     boost::ref(calibrated_cameras));
 
-  ros::Subscriber pose_sub = n.subscribe<ar_track_alvar_msgs::AlvarMarkers>("/ar_pose_marker", 0, callback);
+  auto reconf = boost::bind(
+      on_reconf,
+      _1,
+      boost::ref(calibrated_cameras),
+      boost::ref(main_cam));
+
+  ros::Subscriber pose_sub =
+    n.subscribe<ar_track_alvar_msgs::AlvarMarkers>("/ar_pose_marker", 0, callback);
+  ros::Subscriber reconf_sub =
+    n.subscribe<std_msgs::String>("/reconfigure", 10, reconf);
 
   ros::spin();
   return 0;

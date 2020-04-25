@@ -22,10 +22,16 @@
     <!-- Compute the average position of a tag -->
   <node name="average_tf" pkg="alvar_tag_tracking" type="average_tf" output="screen" args="$(arg main_cam)"/>
 
+    <!-- Starting launchfiles at runtime -->
+  <node name="launcher" pkg="alvar_tag_tracking" type="launcher.py" output="screen"/>
+
     <!-- RqtCalibration GUI -->
   <node name="rqt_calibration" pkg="alvar_tag_tracking" type="rqt_calibration" output="screen">
     <param name="main_cam"    value="$(arg main_cam)"/>
     <param name="marker_size" value="$(arg marker_size)"/>
+
+    <remap from="launch" to="/launcher/launch"/>
+    <remap from="stop" to="/launcher/stop"/>
   </node>
 
   <!-- <include file="$(find alvar_tag_tracking)/launch/unity_camera.launch"> -->

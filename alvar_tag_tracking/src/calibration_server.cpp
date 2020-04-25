@@ -8,6 +8,7 @@
 #include <map>
 #include <unordered_set>
 
+#include <std_msgs/String.h>
 #include <alvar_tag_tracking/Calibration.h>
 #include "average_tools.hpp"
 
@@ -19,7 +20,8 @@ bool calibration(calibration_srv::Request& request,
                  const tf2_ros::TransformListener& tf_listener,
                  std::unordered_set<std::string>& calibrated_cameras,
                  std::map<std::string, average_tf>& list_of_tfs,
-                 tf2_ros::StaticTransformBroadcaster& tf_broadcaster)
+                 tf2_ros::StaticTransformBroadcaster& tf_broadcaster,
+                 ros::Publisher& calibrated_pub)
 {
   std::string marker = "/ar_marker_" + std::to_string(request.id);
   geometry_msgs::TransformStamped source_cam_to_marker;
@@ -42,18 +44,37 @@ bool calibration(calibration_srv::Request& request,
 
     list_of_tfs[request.target_cam] = average(list_of_tfs[request.target_cam], source_to_target);
 
+    //TODO: == -> >=
     if (list_of_tfs[request.target_cam].weight == 10) {
       geometry_msgs::TransformStamped transform =
         tf_to_msg(source_to_target, ros::Time::now(), request.source_cam, request.target_cam);
 
       tf_broadcaster.sendTransform(transform);
 
+      std_msgs::String msg;
+      msg.data = request.target_cam;
+      calibrated_pub.publish(msg);
+
       calibrated_cameras.insert(request.target_cam);
       response.res = true;
-      return true;
     }
   }
-  return false;
+  return true;
+}
+
+void on_reconf(
+  const boost::shared_ptr<std_msgs::String const> msg,
+  std::unordered_set<std::string>& cameras,
+  std::map<std::string, average_tf>& list_of_tfs)
+{
+  const std::string& cam_name = msg->data;
+  if (cameras.count(cam_name)) {
+    cameras.erase(cam_name);
+    list_of_tfs.erase(cam_name);
+    ROS_INFO("Server: removing camera %s's transform", cam_name.c_str());
+  } else {
+    ROS_WARN("Server: camera not found");
+  }
 }
 
 int main(int argc, char** argv) {
@@ -79,19 +100,27 @@ int main(int argc, char** argv) {
   tf2_ros::Buffer tf_buffer;
   tf2_ros::TransformListener tf_listener(tf_buffer);
   tf2_ros::StaticTransformBroadcaster tf_broadcaster;
+  ros::Publisher calibrated_pub = n.advertise<std_msgs::String>("/calibrated", 10);
 
   auto callback = boost::bind(
-    calibration,
-    _1,
-    _2,
+    calibration, _1, _2,
     boost::ref(tf_buffer),
     boost::ref(tf_listener),
     boost::ref(calibrated_cameras),
     boost::ref(list_of_tfs),
-    boost::ref(tf_broadcaster));
+    boost::ref(tf_broadcaster),
+    boost::ref(calibrated_pub));
+
+  auto reconf = boost::bind(
+    on_reconf, _1,
+    boost::ref(calibrated_cameras),
+    boost::ref(list_of_tfs));
 
   ros::ServiceServer service
-    = n.advertiseService<calibration_srv::Request,calibration_srv::Response>("calibration", callback);
+    = n.advertiseService<calibration_srv::Request,calibration_srv::Response>(
+      "calibration", callback);
+  ros::Subscriber reconf_sub =
+    n.subscribe<std_msgs::String>("/reconfigure", 10, reconf);
 
   ros::spin();
   return 0;
